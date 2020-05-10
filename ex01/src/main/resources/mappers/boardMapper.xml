@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jinalim.boardproject.mappers.boardMapper">
+	<insert id="create">
+		<selectKey resultType="Integer" keyProperty="bno" order="BEFORE">
+			select bno_seq.nextval from dual
+		</selectKey>
+			insert into tbl_board (bno, title, content, writer)
+				values (#{bno}, #{title}, #{content}, #{writer})
+	</insert>
+	
+	<select id="read" resultType="com.jinalim.boardproject.boardtest.BoardVO">
+		select * from tbl_board where bno = #{bno}
+	</select>
+	
+	<update id="update">
+		update tbl_board set title = #{title}, content = #{content} where bno = #{bno}
+	</update>
+	
+	<delete id="delete">
+		delete from tbl_board where bno = #{bno}
+	</delete>
+	
+	<select id="listAll" resultType="com.jinalim.boardproject.boardtest.BoardVO">
+		select * from tbl_board where bno > 0 order by bno desc, regdate desc
+	</select>
+	
+	<select id="listCriteria" resultType="BoardVO">
+		<![CDATA[
+			select * from (select A.*, row_number() over(order by bno desc, regdate desc)
+			as rnum from tbl_board A) where rnum between #{pageStart} and #{pageEnd}
+		]]>
+		<!-- SELECT * FROM (SELECT A.*, ROW_NUMBER() OVER(ORDER BY bno desc, regdate desc)
+		AS rnum FROM tbl_board A) WHERE rnum BETWEEN #{pageStart} AND #{pageEnd} -->
+	</select>
+	
+	<select id="countPaging" resultType="int">
+		<![CDATA[
+			select count(bno) from tbl_board where bno > 0
+		]]>
+	</select>
+	
+	<sql id="search">
+		<if test="searchType != null">
+			<if test="searchType == 't'.toString()">
+				and title like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'c'.toString()">
+				and content like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'w'.toString()">
+				and writer like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'tc'.toString()">
+				and (title like '%' || #{keyword} || '%' or content like '%' || #{keyword} || '%')
+			</if>
+			<if test="searchType == 'cw'.toString()">
+				and (content like '%' || #{keyword} || '%' or writer like '%' || #{keyword} || '%')
+			</if>
+			<if test="searchType == 'tcw'.toString()">
+				and (title like '%' || #{keyword} || '%' or content like '%' || #{keyword} || '%' or writer like '%' || #{keyword} || '%')
+			</if>
+		</if>
+	</sql>
+	
+	<select id="listSearch" resultType="BoardVO">
+		<![CDATA[
+				select * from (
+					select rownum, bno, title, content, writer, regdate, viewcnt,
+						row_number() over(order by rownum desc, bno desc, regdate desc) as rnum
+							from tbl_board where bno > 0
+		]]>
+		
+		<include  refid="search"></include>
+		
+		<![CDATA[
+			) mb
+				where rnum between #{pageStart} and #{pageEnd}
+		]]>
+	</select>
+	
+	<select id="listSearchCount" resultType="int">
+		<![CDATA[
+			select count(bno) from tbl_board where bno > 0
+		]]>
+		
+		<include refid="search"></include>
+		
+	</select>
+</mapper>
